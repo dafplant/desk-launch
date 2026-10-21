@@ -1,0 +1,61 @@
+{
+  "defaults": {
+    "wait": 3,
+    "windowTimeout": 10,
+    "settle": 0.8,
+    "fallbackToMain": true,
+    "quitFirst": false
+  },
+
+  "profiles": [
+    {
+      "name": "home-benq",
+      "description": "BenQ PD2706U attached: Helium and Ghostty on the external display.",
+      "when": { "externalName": "BenQ*" },
+      "steps": [
+        { "app": "com.tinyspeck.slackmacgap", "display": "builtin", "desktop": 1 },
+        { "app": "com.apple.mail", "display": "builtin", "desktop": 1 },
+        { "app": "com.spotify.client", "display": "builtin", "desktop": 3 },
+        { "app": "net.imput.helium", "display": "external", "desktop": 1 },
+        { "app": "com.mitchellh.ghostty", "display": "external", "desktop": 2 }
+      ]
+    },
+
+    {
+      "name": "work-lg",
+      "description": "LG attached: Ghostty only on the external display, no Helium there.",
+      "when": { "externalName": "LG*" },
+      "steps": [
+        { "app": "com.tinyspeck.slackmacgap", "display": "builtin", "desktop": 1 },
+        { "app": "com.apple.mail", "display": "builtin", "desktop": 1 },
+        { "app": "com.spotify.client", "display": "builtin", "desktop": 3 },
+        { "app": "com.mitchellh.ghostty", "display": "external", "desktop": 2 }
+      ]
+    },
+
+    {
+      "name": "work-lg-vendor",
+      "description": "Same as work-lg, matched by LG's vendor id when the display name is unhelpful.",
+      "when": { "externalVendor": "0x1e6d" },
+      "steps": [
+        { "app": "com.tinyspeck.slackmacgap", "display": "builtin", "desktop": 1 },
+        { "app": "com.apple.mail", "display": "builtin", "desktop": 1 },
+        { "app": "com.spotify.client", "display": "builtin", "desktop": 3 },
+        { "app": "com.mitchellh.ghostty", "display": "external", "desktop": 2 }
+      ]
+    },
+
+    {
+      "name": "fallback",
+      "description": "Unknown monitor: same as home. Missing displays fall back to the main display.",
+      "when": { "isCatchAll": true },
+      "steps": [
+        { "app": "com.tinyspeck.slackmacgap", "display": "builtin", "desktop": 1 },
+        { "app": "com.apple.mail", "display": "builtin", "desktop": 1 },
+        { "app": "com.spotify.client", "display": "builtin", "desktop": 3 },
+        { "app": "net.imput.helium", "display": "external", "desktop": 1 },
+        { "app": "com.mitchellh.ghostty", "display": "external", "desktop": 2 }
+      ]
+    }
+  ]
+}
