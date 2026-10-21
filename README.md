@@ -223,3 +223,17 @@ install.sh          build + symlink + install config
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Upgrading an existing install
+
+```sh
+cd desk-launch
+git pull
+./install.sh
+```
+
+`install.sh` keeps `~/.config/desk-launch/config.json` and rebuilds the binary.
+Pulling alone is not enough: `~/.local/bin/desk-launch` is a symlink into
+`.build/`, so the old binary keeps running until it is rebuilt. Imported
+Tinycast/Raycast commands point at that same path and need no re-import, and
+Accessibility grants survive.
