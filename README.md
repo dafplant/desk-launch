@@ -24,9 +24,10 @@ cd desk-launch
 
 That builds a release binary, symlinks it to `~/.local/bin/desk-launch`, and
 creates `~/.config/desk-launch/config.json` from `config.example.json` if you
-don't have one. The example profiles are matched against a BenQ at home and an
-LG at work — change `externalName` in each profile to match your own monitors
-(`desk-launch --list-displays` prints their names).
+don't have one. The example profiles match a BenQ at home and any other BenQ at
+work — change `externalName` (or use `externalUUID`) to match your own monitors.
+`desk-launch --list-displays -v` prints every monitor's name, UUID, vendor,
+model and serial.
 
 Then add an alias (optional):
 
@@ -54,13 +55,13 @@ desk-launch --dry-run         # shows the plan without touching anything
 ## How display-dependent plans work
 
 Each profile has a `when` block. The **first profile whose conditions all match**
-the connected displays is used. Display names, vendor ids and UUIDs are all
-stable per monitor, so "BenQ at home, LG at work" is just two profiles.
+the connected displays is used. Display names, serials and UUIDs are stable per
+monitor, so "BenQ at home, BenQ at work" is just two profiles.
 
 ```json
 {
-  "name": "work-lg",
-  "when": { "externalName": "LG*" },
+  "name": "work-benq",
+  "when": { "externalName": "BenQ*" },
   "steps": [ ... ]
 }
 ```
@@ -69,8 +70,9 @@ stable per monitor, so "BenQ at home, LG at work" is just two profiles.
 
 | Key | Matches |
 | --- | --- |
-| `externalName` | glob against the external display's name (`"BenQ*"`, `"LG*"`) |
+| `externalName` | glob against the external display's name (`"BenQ*"`, `"BenQ PD2706U"`) |
 | `externalVendor` | glob against vendor id (`"0x1e6d"`) or name (`"LG"`) |
+| `externalModel` | glob against the model id (`"0x1015"` or `"4117"`) |
 | `externalUUID` | glob against the display UUID (most precise) |
 | `externalSerial` | glob against the serial number |
 | `builtinPresent` | `true` / `false` — `false` is clamshell mode |
@@ -78,7 +80,31 @@ stable per monitor, so "BenQ at home, LG at work" is just two profiles.
 | `anyExternal` | `true` / `false` |
 | `isCatchAll` | `true` — matches anything; keep it last |
 
-Run `desk-launch --list-displays` to see exactly what your monitors report.
+Run `desk-launch --list-displays -v` to see exactly what your monitors report:
+name, UUID, vendor, model and serial.
+
+## Two monitors of the same brand
+
+Vendor can't separate two BenQs, and `"externalName": "BenQ*"` matches both. The
+remaining keys increase in specificity:
+
+| Key | Distinguishes | Caveat |
+| --- | --- | --- |
+| `externalName` | models, if the name includes the model | falls back to a generic name on some cables/adapters |
+| `externalModel` | two different models | useless for two units of one model |
+| `externalSerial` | individual units | some monitors report `0` or duplicate it |
+| `externalUUID` | individual units | changes if the monitor is replaced or its EDID board is |
+
+The pattern that always works: pin the monitor you know by UUID, and let a
+broader profile catch the other. Order matters — first match wins.
+
+```json
+{ "name": "home-benq", "when": { "externalUUID": "9F10C41E-3CAC-498B-AC47-D3F4BED7C94B" }, "steps": [ ... ] },
+{ "name": "work-benq", "when": { "externalName": "BenQ*" }, "steps": [ ... ] }
+```
+
+Once you're at the office, `--list-displays -v` gives you that unit's UUID too,
+and you can pin both — then neither profile depends on being tried first.
 
 If no profile matches, the run stops with an error listing the connected
 displays. Keep a `{ "isCatchAll": true }` profile as the fallback.

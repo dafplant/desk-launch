@@ -243,6 +243,7 @@ enum CaptureService {
         return DisplayCondition(
             externalName: externals.first?.name,
             externalVendor: nil,
+            externalModel: nil,
             externalUUID: nil,
             externalSerial: nil,
             builtinPresent: builtinPresent,

@@ -38,7 +38,8 @@ OPTIONS
                      switching was confirmed, then restore the original desktops
   --config <path>    Config file (default ~/.config/desk-launch/config.json)
   --no-wait          Ignore configured waits (for testing)
-  --verbose          Extra detail
+  --verbose          Extra detail; with --list-displays, shows UUID, vendor,
+                     model and serial
   -h, --help         This text
 
 CAPTURE
@@ -278,6 +279,11 @@ enum Runner {
                globMatch(pattern, $0.vendorHex) || globMatch(pattern, vendorName($0.vendor))
            }) { return false }
 
+        if let pattern = condition.externalModel,
+           !externals.contains(where: {
+               globMatch(pattern, String($0.model)) || globMatch(pattern, $0.modelHex)
+           }) { return false }
+
         if let pattern = condition.externalUUID,
            !externals.contains(where: { globMatch(pattern, $0.uuid) }) { return false }
 
@@ -324,7 +330,15 @@ enum Runner {
             } else {
                 line += "  — desktops unavailable"
             }
-            Log.raw((indent ? "    " : "  ") + line)
+            let prefix = indent ? "    " : "  "
+            Log.raw(prefix + line)
+            if Log.verbose {
+                Log.raw(
+                    prefix + "  uuid \(display.uuid) · vendor \(display.vendorHex)"
+                        + " (\(vendorName(display.vendor))) · model \(display.modelHex)"
+                        + " · serial \(display.serial)"
+                )
+            }
         }
     }
 

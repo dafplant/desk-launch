@@ -14,6 +14,7 @@ struct DisplayInfo {
     let serial: Int
 
     var vendorHex: String { String(format: "0x%04x", vendor) }
+    var modelHex: String { String(format: "0x%04x", model) }
     var kind: String { isBuiltin ? "built-in" : "external" }
 
     var label: String {

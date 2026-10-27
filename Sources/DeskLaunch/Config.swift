@@ -35,6 +35,7 @@ struct LaunchProfile: Codable {
 struct DisplayCondition: Codable {
     var externalName: String?
     var externalVendor: String?
+    var externalModel: String?
     var externalUUID: String?
     var externalSerial: String?
     var builtinPresent: Bool?
