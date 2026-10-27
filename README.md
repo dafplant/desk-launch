@@ -39,6 +39,8 @@ echo "alias desk='$HOME/.local/bin/desk-launch'" >> ~/.zshrc
 
 Switching desktops needs **Accessibility** permission for the app that runs the
 command — your terminal (Ghostty, iTerm, Terminal), not `desk-launch` itself.
+If you trigger it from Raycast or Tinycast instead, that app needs the grant; see
+[Launching from Raycast or Tinycast](#launching-from-raycast-or-tinycast).
 
 1. Run `desk-launch` once. macOS shows a permission prompt.
 2. Or add it manually: **System Settings → Privacy & Security → Accessibility**.
@@ -197,38 +199,54 @@ lines and grouping are not preserved.
 - **The first window wait can be slow**: cold starts (Slack, Spotify) can exceed
   `windowTimeout`; the app still launches, you just get a warning.
 
-## Running it from Tinycast
+## Launching from Raycast or Tinycast
 
-`commands/` holds three Raycast-format script commands, which Tinycast imports as
-custom commands (Settings → Commands → Import Raycast Scripts → pick that folder):
+`commands/` holds four Raycast-format script commands. Both launchers read that
+format, so there's nothing to configure per command:
 
 | Command | Runs |
 | --- | --- |
 | Desk Launch | `desk-launch` |
 | Desk Launch (dry run) | `desk-launch --dry-run` |
 | Desk Launch (doctor) | `desk-launch --doctor` |
-| Desk Launch (capture) | `desk-launch capture --name <profile>` |
+| Desk Launch (capture) | `desk-launch capture --name <profile>` (asks for the name) |
 
-Import is a one-shot copy: after importing, editing these files changes nothing
-until you import again (delete the old entries first).
+### Raycast
 
-Custom Commands is off out of the box — enable it in **Settings → Commands**.
-Then record a hotkey in **Settings → Shortcuts**.
+1. Search **Script Commands** → **Add Script Directory** → choose
+   `~/projects/desk-launch/commands` (wherever you cloned it).
+2. Grant Raycast Accessibility: **System Settings → Privacy & Security →
+   Accessibility**. It may already have it for other features.
+3. Find "Desk Launch" in Raycast, press <kbd>⌘</kbd><kbd>K</kbd> → **Add Hotkey**
+   (or **Configure Command** for an alias).
 
-Because Tinycast spawns the command, **Tinycast** needs Accessibility, not
-Ghostty. `desk-launch --doctor` run from a terminal reports the terminal's grant,
-which is a different thing — run the doctor command *from Tinycast* to see the
-grant that actually matters.
+Raycast watches the folder, so edited scripts and new ones appear without adding
+anything again.
+
+### Tinycast
+
+1. **Settings → Commands** → enable Custom Commands (off out of the box).
+2. **Import Raycast Scripts** → choose the same `commands/` folder.
+3. **Settings → Shortcuts** → search "Desk Launch" → record a hotkey.
+4. Grant Tinycast Accessibility: **System Settings → Privacy & Security →
+   Accessibility**.
+
+Import is a one-shot copy, not a watched folder: after importing, editing these
+files changes nothing until you delete the entries and import again.
+
+### Which app needs the permission?
+
+Whichever app spawns the command — Raycast, Tinycast, or your terminal. The grant
+follows the parent process, so granting your terminal does nothing for a launcher
+hotkey. Run **Desk Launch (doctor)** *from that launcher*: its output reports the
+grant that actually applies, while a terminal run reports the terminal's.
 
 ## Running it automatically
 
-It's just a command, so bind it however you like:
-
-- **Apple Shortcuts**: "Run Shell Script" → `~/.local/bin/desk-launch`, assign a
-  keyboard shortcut or run it at login.
-- **Login item**: System Settings → General → Login Items → add a small wrapper
+- **At login**: System Settings → General → Login Items → add a small wrapper
   script, or a `launchd` agent running it at login.
-- **Hotkey**: any launcher that can run a shell command (Tinycast, Alfred, Raycast).
+- **Apple Shortcuts**: "Run Shell Script" → `~/.local/bin/desk-launch`, with a
+  keyboard shortcut or a login automation.
 
 ## Layout
 
@@ -241,8 +259,8 @@ Sources/DeskLaunch/
   Launch.swift      app resolution, launch, window detection
   Capture.swift     build a profile from what is on screen
   Support.swift     helpers
-config.example.json example config (home BenQ / work LG / fallback)
-commands/           Raycast-format script commands, imported by Tinycast
+config.example.json example config (home BenQ / work BenQ / fallback)
+commands/           Raycast-format script commands, for Raycast and Tinycast
 install.sh          build + symlink + install config
 ```
 
@@ -260,6 +278,6 @@ git pull
 
 `install.sh` keeps `~/.config/desk-launch/config.json` and rebuilds the binary.
 Pulling alone is not enough: `~/.local/bin/desk-launch` is a symlink into
-`.build/`, so the old binary keeps running until it is rebuilt. Imported
-Tinycast/Raycast commands point at that same path and need no re-import, and
+`.build/`, so the old binary keeps running until it is rebuilt. Commands already
+added to Raycast or Tinycast point at that same path and keep working, and
 Accessibility grants survive.
