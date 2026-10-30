@@ -1,5 +1,8 @@
 # desk-launch
 
+<img width="1176" height="796" alt="88579" src="https://github.com/user-attachments/assets/1b5cd7ae-9773-48f0-8a50-63c59c36ba17" />
+
+
 A small command-line app that opens a set of apps on specific desktops, across
 specific displays, with pauses in between — and picks a different plan depending
 on which external display is attached.
