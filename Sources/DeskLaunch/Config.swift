@@ -64,6 +64,25 @@ enum ConfigStore {
         NSHomeDirectory() + "/.config/desk-launch/config.json"
     }
 
+    /// Writes the config as normalised, pretty-printed JSON. Creates the parent
+    /// directory so a fresh install (or `--config <new path>`) works.
+    static func save(_ config: Configuration, to path: String) throws {
+        let url = URL(fileURLWithPath: path)
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let data = try encoder.encode(config)
+        try data.write(to: url, options: .atomic)
+    }
+
+    /// Shared encoder, so everything that writes the config formats it the same way.
+    static var encoder: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
+        return encoder
+    }
+
     static func load(path: String) throws -> Configuration {
         let data: Data
         do {

@@ -35,6 +35,10 @@ Then add an alias (optional):
 echo "alias desk='$HOME/.local/bin/desk-launch'" >> ~/.zshrc
 ```
 
+`install.sh` also builds **Desk Launch.app** in `~/Applications`, which is the
+visual config editor. Open it from Spotlight, or with
+`open "$HOME/Applications/Desk Launch.app"`.
+
 ## One-time permission
 
 Switching desktops needs **Accessibility** permission for the app that runs the
@@ -46,6 +50,26 @@ If you trigger it from Raycast or Tinycast instead, that app needs the grant; se
 2. Or add it manually: **System Settings → Privacy & Security → Accessibility**.
 3. Quit and reopen the terminal after granting.
 
+The grant follows the app that *starts* the run, not `desk-launch`. If you use
+the visual editor, grant **Desk Launch** itself; if you press Run from the
+editor, the run inherits the editor's grant.
+
+If System Settings shows **Desk Launch** switched on but the editor still says
+Accessibility is not granted, the saved grant belongs to an earlier build: an
+ad-hoc signed app is identified by the hash of its code, and rebuilding changes
+that hash while the old toggle stays on. Clear it and grant again:
+
+```sh
+tccutil reset Accessibility com.dafplant.desk-launch
+open "$HOME/Applications/Desk Launch.app"
+```
+
+`install.sh` now signs the app with a requirement pinned to its bundle
+identifier, so the grant survives rebuilds and this should not come back. The
+editor asks macOS for the permission itself on first launch and re-checks
+whenever it becomes active, so there is no need to quit and reopen it after
+granting.
+
 Verify everything with:
 
 ```sh
@@ -53,6 +77,40 @@ desk-launch --doctor
 desk-launch --test-desktops   # switches through your desktops and back, launches nothing
 desk-launch --dry-run         # shows the plan without touching anything
 ```
+
+## The visual editor
+
+Rather than writing JSON, arrange apps on a board: one row per display, one
+column per desktop.
+
+```sh
+desk-launch gui                            # from a terminal
+open "$HOME/Applications/Desk Launch.app"  # or from Spotlight
+```
+
+- **Add apps** by dragging an `.app` from Finder onto a desktop column, or press
+  the column's **+** to pick from the apps installed in `/Applications`,
+  `/System/Applications` and `~/Applications`.
+- **Move apps** by dragging a tile to another column; the **×** removes it, and
+  right-click → *Quit the app first* gives that step a fresh window each run.
+- Each display header shows what macOS reports: the desktop count and which one
+  is showing. Columns past that count are placeholders for apps you will use
+  once the desktop exists; a run clamps them, with a warning.
+- **Profiles** are in the sidebar. The green checkmark is the profile that runs
+  on the displays connected right now (first match wins, like the CLI).
+  *Setup* re-derives the `when` block from the current displays (same rules as
+  `capture`), makes a profile the catch-all fallback, or moves, duplicates and
+  deletes it.
+- Steps that point at a display which is not attached are kept in a grey box at
+  the bottom. Drag one onto a column to rebind it.
+- **Save** (⌘S) writes `~/.config/desk-launch/config.json`; **Dry run** and
+  **Run** (⌘R) save first, then invoke the CLI, so the editor and the
+  command line always run the same code. Output appears in the panel at the
+  bottom.
+
+The editor does not change the execution model: desktops still have to exist
+(create them once in Mission Control), only 1–9 are reachable, and the app needs
+its own Accessibility grant — see [One-time permission](#one-time-permission).
 
 ## How display-dependent plans work
 
@@ -252,16 +310,18 @@ grant that actually applies, while a terminal run reports the terminal's.
 
 ```
 Sources/DeskLaunch/
-  main.swift        CLI, profile selection, execution loop
+  Entry.swift       @main entry: CLI or editor
+  CLI.swift         CLI, profile selection, execution loop
   Config.swift      JSON schema
   Displays.swift    display enumeration and matching
   Spaces.swift      desktop layout + Ctrl+N switching
   Launch.swift      app resolution, launch, window detection
   Capture.swift     build a profile from what is on screen
   Support.swift     helpers
+  Editor/           the visual editor (SwiftUI)
 config.example.json example config (home BenQ / work BenQ / fallback)
 commands/           Raycast-format script commands, for Raycast and Tinycast
-install.sh          build + symlink + install config
+install.sh          build + symlink + app bundle + install config
 ```
 
 ## License

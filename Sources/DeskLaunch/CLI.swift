@@ -18,6 +18,8 @@ struct Options {
     var doctor = false
     var noWait = false
     var testDesktops = false
+    var gui = false
+    var forceCLI = false
     var help = false
 }
 
@@ -27,6 +29,7 @@ desk-launch — open apps on specific desktops, per display
 USAGE
   desk-launch [options]
   desk-launch capture --name <profile> [options]
+  desk-launch gui [options]
 
 OPTIONS
   --profile <name>   Run a specific profile instead of the first matching one
@@ -54,6 +57,12 @@ CAPTURE
 
 CONFIG
   ~/.config/desk-launch/config.json
+
+GUI
+  desk-launch gui
+      Opens the visual editor: one board per display, one column per desktop,
+      drag apps in from Finder or pick from installed apps. It edits the same
+      config file and runs profiles by invoking the CLI.
 """
 
 enum Runner {
@@ -503,92 +512,113 @@ func formatSeconds(_ value: Double) -> String {
 
 // MARK: - Entry point
 
-var options = Options()
-var index = 1
-while index < CommandLine.arguments.count {
-    let argument = CommandLine.arguments[index]
-    switch argument {
-    case "--config":
-        index += 1
-        guard index < CommandLine.arguments.count else {
-            Log.fail("--config needs a path")
+@MainActor
+func runCLI() {
+    var options = Options()
+    var index = 1
+    while index < CommandLine.arguments.count {
+        let argument = CommandLine.arguments[index]
+        switch argument {
+        case "--config":
+            index += 1
+            guard index < CommandLine.arguments.count else {
+                Log.fail("--config needs a path")
+                exit(2)
+            }
+            options.configPath = CommandLine.arguments[index]
+        case "--profile":
+            index += 1
+            guard index < CommandLine.arguments.count else {
+                Log.fail("--profile needs a name")
+                exit(2)
+            }
+            options.profile = CommandLine.arguments[index]
+        case "--dry-run", "-n":
+            options.dryRun = true
+        case "capture":
+            options.capture = true
+        case "--name":
+            index += 1
+            guard index < CommandLine.arguments.count else {
+                Log.fail("--name needs a value")
+                exit(2)
+            }
+            options.captureName = CommandLine.arguments[index]
+        case "--merge":
+            options.merge = true
+        case "--print-only":
+            options.printOnly = true
+        case "--all-desktops":
+            options.allDesktops = true
+        case "--from-profile":
+            index += 1
+            guard index < CommandLine.arguments.count else {
+                Log.fail("--from-profile needs a name")
+                exit(2)
+            }
+            options.fromProfile = CommandLine.arguments[index]
+        case "--exclude":
+            index += 1
+            guard index < CommandLine.arguments.count else {
+                Log.fail("--exclude needs a bundle id")
+                exit(2)
+            }
+            options.excludes.append(CommandLine.arguments[index])
+        case "--list-displays":
+            options.listDisplays = true
+        case "--list-profiles":
+            options.listProfiles = true
+        case "--doctor":
+            options.doctor = true
+        case "--test-desktops":
+            options.testDesktops = true
+        case "--no-wait":
+            options.noWait = true
+        case "gui", "--gui":
+            options.gui = true
+        case "--cli":
+            // Used by the editor when it re-invokes this binary to run a profile.
+            options.forceCLI = true
+        case "--verbose", "-v":
+            options.verbose = true
+        case "--help", "-h":
+            options.help = true
+        default:
+            // Finder adds -psn_… when it launches an app bundle.
+            if argument.hasPrefix("-psn_") { break }
+            Log.fail("unknown option \(argument)")
+            print(usageText)
             exit(2)
         }
-        options.configPath = CommandLine.arguments[index]
-    case "--profile":
         index += 1
-        guard index < CommandLine.arguments.count else {
-            Log.fail("--profile needs a name")
-            exit(2)
-        }
-        options.profile = CommandLine.arguments[index]
-    case "--dry-run", "-n":
-        options.dryRun = true
-    case "capture":
-        options.capture = true
-    case "--name":
-        index += 1
-        guard index < CommandLine.arguments.count else {
-            Log.fail("--name needs a value")
-            exit(2)
-        }
-        options.captureName = CommandLine.arguments[index]
-    case "--merge":
-        options.merge = true
-    case "--print-only":
-        options.printOnly = true
-    case "--all-desktops":
-        options.allDesktops = true
-    case "--from-profile":
-        index += 1
-        guard index < CommandLine.arguments.count else {
-            Log.fail("--from-profile needs a name")
-            exit(2)
-        }
-        options.fromProfile = CommandLine.arguments[index]
-    case "--exclude":
-        index += 1
-        guard index < CommandLine.arguments.count else {
-            Log.fail("--exclude needs a bundle id")
-            exit(2)
-        }
-        options.excludes.append(CommandLine.arguments[index])
-    case "--list-displays":
-        options.listDisplays = true
-    case "--list-profiles":
-        options.listProfiles = true
-    case "--doctor":
-        options.doctor = true
-    case "--test-desktops":
-        options.testDesktops = true
-    case "--no-wait":
-        options.noWait = true
-    case "--verbose", "-v":
-        options.verbose = true
-    case "--help", "-h":
-        options.help = true
-    default:
-        Log.fail("unknown option \(argument)")
-        print(usageText)
-        exit(2)
     }
-    index += 1
+
+    if options.help {
+        print(usageText)
+        exit(0)
+    }
+
+    Log.verbose = options.verbose
+    Log.color = isatty(STDOUT_FILENO) == 1
+
+    // Double-clicking the app bundle opens the editor. The CLI keeps its normal
+    // behaviour everywhere else, and `--cli` lets the editor re-invoke this same
+    // binary to run a profile.
+    let meaningfulArguments = CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("-psn_") }
+    let launchedFromAppBundle = Bundle.main.bundleURL.pathExtension == "app"
+    if options.gui || (launchedFromAppBundle && !options.forceCLI && meaningfulArguments.isEmpty) {
+        GUI.run(configPath: expandPath(options.configPath ?? ConfigStore.defaultPath))
+        exit(0)
+    }
+
+    do {
+        try Runner.run(options)
+    } catch let error as ConfigError {
+        Log.fail(error.description)
+        exit(1)
+    } catch {
+        Log.fail("\(error)")
+        exit(1)
+    }
 }
 
-if options.help {
-    print(usageText)
-    exit(0)
-}
-
-Log.verbose = options.verbose
-Log.color = isatty(STDOUT_FILENO) == 1
-
-do {
-    try Runner.run(options)
-} catch let error as ConfigError {
-    Log.fail(error.description)
-    exit(1)
-} catch {
-    Log.fail("\(error)")
-    exit(1)
-}

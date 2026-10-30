@@ -231,13 +231,16 @@ enum CaptureService {
         )
     }
 
-    private static func selector(for display: DisplayInfo, displays: [DisplayInfo]) -> String {
+    /// How a step should refer to `display`: "builtin", "external" when there is
+    /// only one external, otherwise the display's name. Shared with the editor.
+    static func selector(for display: DisplayInfo, displays: [DisplayInfo]) -> String {
         if display.isBuiltin { return "builtin" }
         let externals = displays.filter { !$0.isBuiltin }
         return externals.count == 1 ? "external" : display.name
     }
 
-    private static func condition(for displays: [DisplayInfo]) -> DisplayCondition {
+    /// The `when` block for the displays attached right now. Shared with the editor.
+    static func condition(for displays: [DisplayInfo]) -> DisplayCondition {
         let externals = displays.filter { !$0.isBuiltin }
         let builtinPresent = displays.contains { $0.isBuiltin }
         return DisplayCondition(
